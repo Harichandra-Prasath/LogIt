@@ -10,12 +10,13 @@ func main() {
 
 	logger := LogIt.NewLogger(
 		LogIt.LoggerOptions{
-			Level: 0,
+			Level: LogIt.LEVEL_DEBUG,
+			Flags: LogIt.TIME_FLAG | LogIt.DATE_FLAG,
 		},
 		LogIt.NewDefaultHandler(
 			os.Stdout,
 		),
 	)
 
-	logger.Info("Hello World")
+	logger.Info("Hello", "World")
 }

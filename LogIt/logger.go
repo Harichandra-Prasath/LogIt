@@ -1,6 +1,6 @@
 package LogIt
 
-type LogItLevel int
+type LogItLevel uint
 
 const LEVEL_DEBUG LogItLevel = 0
 const LEVEL_INFO LogItLevel = 1
@@ -12,6 +12,8 @@ type LoggerOptions struct {
 
 	// Least level for the logger. Levels below will be ignored
 	Level LogItLevel
+
+	Flags int
 }
 
 // Core logger to log the records
@@ -24,8 +26,10 @@ type Record struct {
 	// level of the log message
 	Level string
 
-	// actual content of the log
-	Message string
+	// actual content of the log. Final message will be joined with " "
+	Message []string
+
+	Flags int
 }
 
 func NewLogger(opts LoggerOptions, handler Handler) *Logger {
@@ -37,7 +41,7 @@ func NewLogger(opts LoggerOptions, handler Handler) *Logger {
 
 }
 
-func (l *Logger) Info(message string) {
+func (l *Logger) Info(message ...string) {
 
 	// Ignore if the Logger level is higher than Info
 	if l.Options.Level > LEVEL_INFO {
@@ -48,6 +52,7 @@ func (l *Logger) Info(message string) {
 	rc := Record{
 		Level:   "INFO",
 		Message: message,
+		Flags:   l.Options.Flags,
 	}
 
 	l.Handler.Handle(rc)

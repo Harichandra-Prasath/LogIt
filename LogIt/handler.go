@@ -4,8 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
+	"time"
 )
+
+const (
+	DATE_FLAG = 1 << iota
+	TIME_FLAG
+)
+
+const SPACING = "  "
 
 type Handler interface {
 
@@ -21,8 +30,23 @@ type DefaultHandler struct {
 	Writer io.Writer
 }
 
-func NewDefaultHandler(w io.Writer) *DefaultHandler {
+func populateFlags(buff *bytes.Buffer, t time.Time, flags int) {
 
+	if flags&(DATE_FLAG|TIME_FLAG) != 0 {
+		if flags&(DATE_FLAG) != 0 {
+			y, m, d := t.Date()
+			_s := fmt.Sprintf("%d/%d/%d%s", d, int(m), y, SPACING)
+			buff.WriteString(_s)
+		}
+		if flags&(TIME_FLAG) != 0 {
+			h, m, s := t.Clock()
+			_s := fmt.Sprintf("%d:%d:%d%s", h, m, s, SPACING)
+			buff.WriteString(_s)
+		}
+	}
+}
+
+func NewDefaultHandler(w io.Writer) *DefaultHandler {
 	return &DefaultHandler{
 		Writer: w,
 	}
@@ -35,7 +59,12 @@ func (h *DefaultHandler) Handle(r Record) error {
 	var _buff []byte
 
 	buff := bytes.NewBuffer(_buff)
-	_rc := fmt.Sprintf("%s\t%s\n", r.Level, r.Message)
+
+	// Build the predefined flags
+	t := time.Now()
+	populateFlags(buff, t, r.Flags)
+
+	_rc := fmt.Sprintf("%s%s%s\n", r.Level, SPACING, strings.Join(r.Message, " "))
 	buff.WriteString(_rc)
 
 	err := h.Write(buff)
