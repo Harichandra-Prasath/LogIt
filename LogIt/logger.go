@@ -58,3 +58,57 @@ func (l *Logger) Info(message ...string) {
 	l.Handler.Handle(rc)
 
 }
+
+func (l *Logger) Debug(message ...string) {
+
+	// Ignore if the Logger level is higher than DEBUG
+	if l.Options.Level > LEVEL_DEBUG {
+		return
+	}
+
+	// Create the record
+	rc := Record{
+		Level:   "DEBUG",
+		Message: message,
+		Flags:   l.Options.Flags,
+	}
+
+	l.Handler.Handle(rc)
+
+}
+
+func (l *Logger) Warn(message ...string) {
+
+	// Ignore if the Logger level is higher than WARN
+	if l.Options.Level > LEVEL_WARN {
+		return
+	}
+
+	// Create the record
+	rc := Record{
+		Level:   "WARN",
+		Message: message,
+		Flags:   l.Options.Flags,
+	}
+
+	l.Handler.Handle(rc)
+
+}
+
+func (l *Logger) Error(message ...string) {
+
+	// Ignore if the Logger level is higher than ERROR
+	if l.Options.Level > LEVEL_ERROR {
+		return
+	}
+
+	// Create the record
+	rc := Record{
+		Level:   "ERROR",
+		Message: message,
+		Flags:   l.Options.Flags,
+	}
+
+	l.Handler.Handle(rc)
+
+}

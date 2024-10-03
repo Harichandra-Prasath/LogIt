@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -22,12 +23,12 @@ type Handler interface {
 	Handle(Record) error
 
 	// Writes to the defined writer
-	Write(*bytes.Buffer) error
+	Write(*bytes.Buffer, io.Writer) error
 }
 
+// Defualt handler which writes to os.stdout for All levels except error
 type DefaultHandler struct {
-	Lock   sync.Mutex
-	Writer io.Writer
+	Lock sync.Mutex
 }
 
 func populateFlags(buff *bytes.Buffer, t time.Time, flags int) {
@@ -46,10 +47,8 @@ func populateFlags(buff *bytes.Buffer, t time.Time, flags int) {
 	}
 }
 
-func NewDefaultHandler(w io.Writer) *DefaultHandler {
-	return &DefaultHandler{
-		Writer: w,
-	}
+func NewDefaultHandler() *DefaultHandler {
+	return &DefaultHandler{}
 
 }
 
@@ -67,7 +66,16 @@ func (h *DefaultHandler) Handle(r Record) error {
 	_rc := fmt.Sprintf("%s%s%s\n", r.Level, SPACING, strings.Join(r.Message, " "))
 	buff.WriteString(_rc)
 
-	err := h.Write(buff)
+	// Set the writer
+	var _w io.Writer
+
+	if r.Level == "ERROR" {
+		_w = os.Stderr
+	} else {
+		_w = os.Stdout
+	}
+
+	err := h.Write(buff, _w)
 	if err != nil {
 		return fmt.Errorf("on handling: %s", err)
 	}
@@ -76,12 +84,12 @@ func (h *DefaultHandler) Handle(r Record) error {
 }
 
 // Responsible for writing the bytes to the writer
-func (h *DefaultHandler) Write(buff *bytes.Buffer) error {
+func (h *DefaultHandler) Write(buff *bytes.Buffer, w io.Writer) error {
 
 	_raw := buff.Bytes()
 
 	h.Lock.Lock()
-	_, err := h.Writer.Write(_raw)
+	_, err := w.Write(_raw)
 	h.Lock.Unlock()
 
 	if err != nil {

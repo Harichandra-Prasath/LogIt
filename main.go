@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/Harichandra-Prasath/LogIt/LogIt"
 )
 
@@ -13,10 +11,8 @@ func main() {
 			Level: LogIt.LEVEL_DEBUG,
 			Flags: LogIt.TIME_FLAG | LogIt.DATE_FLAG,
 		},
-		LogIt.NewDefaultHandler(
-			os.Stdout,
-		),
+		LogIt.NewDefaultHandler(),
 	)
 
-	logger.Info("Hello", "World")
+	logger.Error("Hello", "World")
 }
