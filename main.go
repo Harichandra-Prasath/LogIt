@@ -9,10 +9,6 @@ func main() {
 	logger := LogIt.DefaultLogger()
 	defer logger.Flush()
 
-	logger.Error("Hello", "World")
-	logger.Info("Come")
-	logger.Warn("Tellphone")
-	logger.Info("dwejoj")
-	logger.Warn("JKJ")
+	logger.Info("Hello", "World")
 
 }

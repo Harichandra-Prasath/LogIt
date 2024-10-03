@@ -1,6 +1,7 @@
 package LogIt
 
 import (
+	"os"
 	"sync"
 )
 
@@ -17,7 +18,18 @@ type LoggerOptions struct {
 	// Least level for the logger. Levels below will be ignored
 	Level LogItLevel
 
+	// Options that will be inherited by records for output
+	RecordOptions RecordOptions
+}
+
+type RecordOptions struct {
 	Flags int
+
+	// Option for Pretty Output
+	Colorfull bool
+
+	// Spacing between Flags
+	Spacing int
 }
 
 // Core logger to log the records
@@ -33,10 +45,10 @@ type Record struct {
 	// level of the log message
 	Level string
 
-	// actual content of the log. Final message will be joined with " "
+	//actual content of the message
 	Message []string
 
-	Flags int
+	Options RecordOptions
 }
 
 // Default logger has only StdFlags and Least level as Info
@@ -44,9 +56,15 @@ func DefaultLogger() *Logger {
 	l := &Logger{
 		Options: LoggerOptions{
 			Level: LEVEL_INFO,
-			Flags: STD_FLAG,
+			RecordOptions: RecordOptions{
+				Flags:     STD_FLAG,
+				Colorfull: false,
+				Spacing:   2,
+			},
 		},
-		Handler:  NewDefaultHandler(),
+		Handler: NewLogHandler(
+			os.Stdout, os.Stderr,
+		),
 		logQueue: newLogQueue(),
 		stopCh:   make(chan struct{}),
 	}
@@ -120,7 +138,7 @@ func (l *Logger) _push(Level string, message ...string) {
 	rc := Record{
 		Level:   Level,
 		Message: message,
-		Flags:   l.Options.Flags,
+		Options: l.Options.RecordOptions,
 	}
 
 	l.logQueue.Push(rc)
@@ -153,6 +171,7 @@ outer:
 	}
 }
 
+// blocking call that flushes all the logs stored in the queue
 func (l *Logger) Flush() {
 	l.stopCh <- struct{}{}
 	l.waitgrp.Wait()
