@@ -1,5 +1,9 @@
 package LogIt
 
+import (
+	"time"
+)
+
 type LogItLevel uint
 
 const LEVEL_DEBUG LogItLevel = 0
@@ -18,8 +22,10 @@ type LoggerOptions struct {
 
 // Core logger to log the records
 type Logger struct {
-	Options LoggerOptions
-	Handler Handler
+	Options  LoggerOptions
+	Handler  Handler
+	logQueue *LogQueue
+	stopCh   chan struct{}
 }
 
 type Record struct {
@@ -32,12 +38,33 @@ type Record struct {
 	Flags int
 }
 
+// Default logger has only StdFlags and Least level as Info
+func DefaultLogger() *Logger {
+	l := &Logger{
+		Options: LoggerOptions{
+			Level: LEVEL_INFO,
+			Flags: STD_FLAG,
+		},
+		Handler:  NewDefaultHandler(),
+		logQueue: newLogQueue(),
+		stopCh:   make(chan struct{}),
+	}
+	go l._forward()
+
+	return l
+}
+
 func NewLogger(opts LoggerOptions, handler Handler) *Logger {
 
-	return &Logger{
-		Options: opts,
-		Handler: handler,
+	l := &Logger{
+		Options:  opts,
+		Handler:  handler,
+		logQueue: newLogQueue(),
+		stopCh:   make(chan struct{}),
 	}
+	go l._forward()
+
+	return l
 
 }
 
@@ -48,14 +75,7 @@ func (l *Logger) Info(message ...string) {
 		return
 	}
 
-	// Create the record
-	rc := Record{
-		Level:   "INFO",
-		Message: message,
-		Flags:   l.Options.Flags,
-	}
-
-	l.Handler.Handle(rc)
+	l._push("INFO", message...)
 
 }
 
@@ -66,14 +86,7 @@ func (l *Logger) Debug(message ...string) {
 		return
 	}
 
-	// Create the record
-	rc := Record{
-		Level:   "DEBUG",
-		Message: message,
-		Flags:   l.Options.Flags,
-	}
-
-	l.Handler.Handle(rc)
+	l._push("DEBUG", message...)
 
 }
 
@@ -84,14 +97,7 @@ func (l *Logger) Warn(message ...string) {
 		return
 	}
 
-	// Create the record
-	rc := Record{
-		Level:   "WARN",
-		Message: message,
-		Flags:   l.Options.Flags,
-	}
-
-	l.Handler.Handle(rc)
+	l._push("WARN", message...)
 
 }
 
@@ -102,13 +108,50 @@ func (l *Logger) Error(message ...string) {
 		return
 	}
 
+	l._push("ERROR", message...)
+
+}
+
+// Forwards the record to the Hanlder
+func (l *Logger) _push(Level string, message ...string) {
+
 	// Create the record
 	rc := Record{
-		Level:   "ERROR",
+		Level:   Level,
 		Message: message,
 		Flags:   l.Options.Flags,
 	}
 
-	l.Handler.Handle(rc)
+	l.logQueue.Push(rc)
+}
 
+func (l *Logger) _forward() {
+	for {
+
+		select {
+		case <-l.stopCh:
+			for {
+				rc, err := l.logQueue.Top()
+				if err != nil {
+					break
+
+				}
+				l.Handler.handle(rc)
+				l.logQueue.Pop()
+			}
+		default:
+			rc, err := l.logQueue.Top()
+			if err != nil {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			l.Handler.handle(rc)
+			l.logQueue.Pop()
+		}
+
+	}
+}
+
+func (l *Logger) Flush() {
+	l.stopCh <- struct{}{}
 }

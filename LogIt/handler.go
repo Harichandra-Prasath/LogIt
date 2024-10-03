@@ -13,6 +13,7 @@ import (
 const (
 	DATE_FLAG = 1 << iota
 	TIME_FLAG
+	STD_FLAG = DATE_FLAG | TIME_FLAG
 )
 
 const SPACING = "  "
@@ -20,15 +21,19 @@ const SPACING = "  "
 type Handler interface {
 
 	// Takes the log record and prepare it for the writing
-	Handle(Record) error
+	handle(Record) error
 
 	// Writes to the defined writer
-	Write(*bytes.Buffer, io.Writer) error
+	write(*bytes.Buffer, io.Writer) error
 }
 
 // Defualt handler which writes to os.stdout for All levels except error
 type DefaultHandler struct {
 	Lock sync.Mutex
+}
+
+func NewDefaultHandler() *DefaultHandler {
+	return &DefaultHandler{}
 }
 
 func populateFlags(buff *bytes.Buffer, t time.Time, flags int) {
@@ -47,13 +52,8 @@ func populateFlags(buff *bytes.Buffer, t time.Time, flags int) {
 	}
 }
 
-func NewDefaultHandler() *DefaultHandler {
-	return &DefaultHandler{}
-
-}
-
 // Responsible for preparing the buffer that has to be written
-func (h *DefaultHandler) Handle(r Record) error {
+func (h *DefaultHandler) handle(r Record) error {
 
 	var _buff []byte
 
@@ -75,7 +75,7 @@ func (h *DefaultHandler) Handle(r Record) error {
 		_w = os.Stdout
 	}
 
-	err := h.Write(buff, _w)
+	err := h.write(buff, _w)
 	if err != nil {
 		return fmt.Errorf("on handling: %s", err)
 	}
@@ -84,7 +84,7 @@ func (h *DefaultHandler) Handle(r Record) error {
 }
 
 // Responsible for writing the bytes to the writer
-func (h *DefaultHandler) Write(buff *bytes.Buffer, w io.Writer) error {
+func (h *DefaultHandler) write(buff *bytes.Buffer, w io.Writer) error {
 
 	_raw := buff.Bytes()
 
