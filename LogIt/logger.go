@@ -1,7 +1,7 @@
 package LogIt
 
 import (
-	"time"
+	"sync"
 )
 
 type LogItLevel uint
@@ -26,6 +26,7 @@ type Logger struct {
 	Handler  Handler
 	logQueue *LogQueue
 	stopCh   chan struct{}
+	waitgrp  sync.WaitGroup
 }
 
 type Record struct {
@@ -126,15 +127,16 @@ func (l *Logger) _push(Level string, message ...string) {
 }
 
 func (l *Logger) _forward() {
+	l.waitgrp.Add(1)
+	defer l.waitgrp.Done()
+outer:
 	for {
-
 		select {
 		case <-l.stopCh:
 			for {
 				rc, err := l.logQueue.Top()
 				if err != nil {
-					break
-
+					break outer
 				}
 				l.Handler.handle(rc)
 				l.logQueue.Pop()
@@ -142,7 +144,6 @@ func (l *Logger) _forward() {
 		default:
 			rc, err := l.logQueue.Top()
 			if err != nil {
-				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 			l.Handler.handle(rc)
@@ -154,4 +155,5 @@ func (l *Logger) _forward() {
 
 func (l *Logger) Flush() {
 	l.stopCh <- struct{}{}
+	l.waitgrp.Wait()
 }

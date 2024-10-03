@@ -10,4 +10,9 @@ func main() {
 	defer logger.Flush()
 
 	logger.Error("Hello", "World")
+	logger.Info("Come")
+	logger.Warn("Tellphone")
+	logger.Info("dwejoj")
+	logger.Warn("JKJ")
+
 }
