@@ -51,7 +51,8 @@ type Record struct {
 	Options RecordOptions
 }
 
-// Default logger has only StdFlags and Least level as Info
+// Default logger has only StdFlags and Least level as Info;
+// Stderr for Error level logs and Stdout for rest
 func DefaultLogger() *Logger {
 	l := &Logger{
 		Options: LoggerOptions{
@@ -62,7 +63,7 @@ func DefaultLogger() *Logger {
 				Spacing:   2,
 			},
 		},
-		Handler: NewLogHandler(
+		Handler: NewTextHandler(
 			os.Stdout, os.Stderr,
 		),
 		logQueue: newLogQueue(),
@@ -73,6 +74,7 @@ func DefaultLogger() *Logger {
 	return l
 }
 
+// Creates a NewLogger with options and handler
 func NewLogger(opts LoggerOptions, handler Handler) *Logger {
 
 	l := &Logger{
