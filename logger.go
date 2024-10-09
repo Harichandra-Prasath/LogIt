@@ -162,21 +162,15 @@ outer:
 	for {
 		select {
 		case <-l.stopCh:
-			for {
-				rc, err := l.logQueue.top()
-				if err != nil {
-					break outer
-				}
+
+			// Flush the remaining the records in the Queue
+			for len(l.logQueue.queue) > 0 {
+				rc := <-l.logQueue.queue
 				l.Handler.handle(rc)
-				l.logQueue.pop()
 			}
-		default:
-			rc, err := l.logQueue.top()
-			if err != nil {
-				continue
-			}
+			break outer
+		case rc := <-l.logQueue.queue:
 			l.Handler.handle(rc)
-			l.logQueue.pop()
 		}
 
 	}
