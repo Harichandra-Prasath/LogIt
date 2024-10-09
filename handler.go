@@ -32,11 +32,15 @@ type Handler interface {
 	write(*bytes.Buffer, bool) error
 }
 
-// Users can define different writers for Errors and Rest
+// Basic Text Handler for logger
 type TextHandler struct {
 	Lock sync.Mutex
-	Out  io.Writer
-	Err  io.Writer
+
+	// writer to write logs other than level ERROR
+	Out io.Writer
+
+	// writer to write logs for level ERROR
+	Err io.Writer
 }
 
 // Returns a new TextHandler for given writers
@@ -47,13 +51,17 @@ func NewTextHandler(out io.Writer, err io.Writer) *TextHandler {
 	}
 }
 
-func populateFlags(buff *bytes.Buffer, t time.Time, flags int, spacing string) {
+// Populates requested flags before writing the main content of the logs
+func populateFlags(buff *bytes.Buffer, t time.Time, flags int, spacing string, colorfull bool) {
 
 	if flags&(DATE_FLAG|TIME_FLAG) != 0 {
 		if flags&(DATE_FLAG) != 0 {
 			y, m, d := t.Date()
 
-			buff.WriteString(COLOR_MAP[DATE_FLAG])
+			if colorfull {
+				buff.WriteString(COLOR_MAP[DATE_FLAG])
+
+			}
 
 			_s := fmt.Sprintf("%d/%d/%d%s", d, int(m), y, spacing)
 			buff.WriteString(_s)
@@ -62,7 +70,9 @@ func populateFlags(buff *bytes.Buffer, t time.Time, flags int, spacing string) {
 
 			h, m, s := t.Clock()
 
-			buff.WriteString(COLOR_MAP[TIME_FLAG])
+			if colorfull {
+				buff.WriteString(COLOR_MAP[TIME_FLAG])
+			}
 
 			_s := fmt.Sprintf("%d:%d:%d%s", h, m, s, spacing)
 			buff.WriteString(_s)
@@ -87,13 +97,19 @@ func (h *TextHandler) handle(r Record) error {
 
 	// Build the predefined flags
 	t := time.Now()
-	populateFlags(buff, t, r.Options.Flags, _spacing)
+	populateFlags(buff, t, r.Options.Flags, _spacing, r.Options.Colorfull)
 
-	_lc := COLOR_MAP[0]
-	_re := COLOR_MAP[-1]
+	var level string
 
-	level := fmt.Sprintf("%s%s", _lc, r.Level)
-	_rc := fmt.Sprintf("%s%s%s%s\n", level, _re, _spacing, strings.Join(r.Message, " "))
+	if r.Options.Colorfull {
+		_lc := COLOR_MAP[0]
+		_re := COLOR_MAP[-1]
+		level = fmt.Sprintf("%s%s%s", _lc, r.Level, _re)
+	} else {
+		level = r.Level
+	}
+
+	_rc := fmt.Sprintf("%s%s%s\n", level, _spacing, strings.Join(r.Message, " "))
 
 	buff.WriteString(_rc)
 

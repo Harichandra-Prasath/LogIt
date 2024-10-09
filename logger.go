@@ -23,6 +23,8 @@ type LoggerOptions struct {
 }
 
 type RecordOptions struct {
+
+	// Flags for the log record
 	Flags int
 
 	// Option for Pretty Output
@@ -36,11 +38,12 @@ type RecordOptions struct {
 type Logger struct {
 	Options  LoggerOptions
 	Handler  Handler
-	logQueue *LogQueue
+	logQueue *logQueue
 	stopCh   chan struct{}
 	waitgrp  sync.WaitGroup
 }
 
+// Core type that represents the final log
 type Record struct {
 	// level of the log message
 	Level string
@@ -89,6 +92,7 @@ func NewLogger(opts LoggerOptions, handler Handler) *Logger {
 
 }
 
+// Logs the passed message with level INFO
 func (l *Logger) Info(message ...string) {
 
 	// Ignore if the Logger level is higher than Info
@@ -100,6 +104,7 @@ func (l *Logger) Info(message ...string) {
 
 }
 
+// Logs the passed message with level DEBUG
 func (l *Logger) Debug(message ...string) {
 
 	// Ignore if the Logger level is higher than DEBUG
@@ -111,6 +116,7 @@ func (l *Logger) Debug(message ...string) {
 
 }
 
+// Logs the passed message with level WARN
 func (l *Logger) Warn(message ...string) {
 
 	// Ignore if the Logger level is higher than WARN
@@ -122,6 +128,7 @@ func (l *Logger) Warn(message ...string) {
 
 }
 
+// Logs the passed message with level ERROR
 func (l *Logger) Error(message ...string) {
 
 	// Ignore if the Logger level is higher than ERROR
@@ -133,7 +140,7 @@ func (l *Logger) Error(message ...string) {
 
 }
 
-// Forwards the record to the Hanlder
+// Push the record to the Queue
 func (l *Logger) _push(Level string, message ...string) {
 
 	// Create the record
@@ -143,9 +150,11 @@ func (l *Logger) _push(Level string, message ...string) {
 		Options: l.Options.RecordOptions,
 	}
 
-	l.logQueue.Push(rc)
+	l.logQueue.push(rc)
 }
 
+// Forwards the record to the handler
+// FIFO log Processing
 func (l *Logger) _forward() {
 	l.waitgrp.Add(1)
 	defer l.waitgrp.Done()
@@ -154,20 +163,20 @@ outer:
 		select {
 		case <-l.stopCh:
 			for {
-				rc, err := l.logQueue.Top()
+				rc, err := l.logQueue.top()
 				if err != nil {
 					break outer
 				}
 				l.Handler.handle(rc)
-				l.logQueue.Pop()
+				l.logQueue.pop()
 			}
 		default:
-			rc, err := l.logQueue.Top()
+			rc, err := l.logQueue.top()
 			if err != nil {
 				continue
 			}
 			l.Handler.handle(rc)
-			l.logQueue.Pop()
+			l.logQueue.pop()
 		}
 
 	}

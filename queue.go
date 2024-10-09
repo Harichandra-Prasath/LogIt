@@ -6,30 +6,30 @@ import (
 	"sync"
 )
 
-type LogQueue struct {
+type logQueue struct {
 	lock  sync.RWMutex
 	queue *list.List
 }
 
-func newLogQueue() *LogQueue {
-	return &LogQueue{
+func newLogQueue() *logQueue {
+	return &logQueue{
 		queue: list.New(),
 	}
 }
 
-func (q *LogQueue) Push(rc Record) {
+func (q *logQueue) push(rc Record) {
 	q.lock.Lock()
 	q.queue.PushBack(rc)
 	q.lock.Unlock()
 }
 
-func (q *LogQueue) Pop() {
+func (q *logQueue) pop() {
 	q.lock.Lock()
 	q.queue.Remove(q.queue.Front())
 	q.lock.Unlock()
 }
 
-func (q *LogQueue) Top() (Record, error) {
+func (q *logQueue) top() (Record, error) {
 	q.lock.RLock()
 	r := q.queue.Front()
 	if r == nil {
