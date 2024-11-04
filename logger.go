@@ -1,7 +1,9 @@
 package LogIt
 
 import (
+	"fmt"
 	"os"
+	"runtime"
 	"sync"
 )
 
@@ -44,12 +46,15 @@ type Logger struct {
 }
 
 // Core type that represents the final log
-type Record struct {
+type record struct {
 	// level of the log message
 	Level string
 
 	//actual content of the message
 	Message []string
+
+	// Called function and line
+	file string
 
 	Options RecordOptions
 }
@@ -143,11 +148,18 @@ func (l *Logger) Error(message ...string) {
 // Push the record to the Queue
 func (l *Logger) _push(Level string, message ...string) {
 
+	var file string
+	_, _file, line, ok := runtime.Caller(2)
+	if ok {
+		file = fmt.Sprintf("%s:%d", _file, line)
+	}
+
 	// Create the record
-	rc := Record{
+	rc := record{
 		Level:   Level,
 		Message: message,
 		Options: l.Options.RecordOptions,
+		file:    file,
 	}
 
 	l.logQueue.push(rc)

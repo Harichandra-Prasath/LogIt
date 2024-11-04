@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -12,21 +13,24 @@ import (
 const (
 	DATE_FLAG = 1 << iota
 	TIME_FLAG
-
+	SHORTFILE_FLAG
+	LONGFILE_FLAG
 	STD_FLAG = DATE_FLAG | TIME_FLAG
 )
 
 var COLOR_MAP = map[int]string{
-	DATE_FLAG: "\033[38;5;209m",
-	TIME_FLAG: "\033[38;5;154m",
-	0:         "\033[38;5;104m",
-	-1:        "\033[39m",
+	DATE_FLAG:      "\033[38;5;209m",
+	TIME_FLAG:      "\033[38;5;154m",
+	SHORTFILE_FLAG: "\033[38;5;88m",
+	LONGFILE_FLAG:  "\033[38;5;88m",
+	0:              "\033[38;5;104m",
+	-1:             "\033[39m",
 }
 
 type Handler interface {
 
 	// Takes the Log record and prepare it for the writing
-	handle(Record) error
+	handle(record) error
 
 	// Writes to the defined writer
 	write(*bytes.Buffer, bool) error
@@ -52,7 +56,7 @@ func NewTextHandler(out io.Writer, err io.Writer) *TextHandler {
 }
 
 // Populates requested flags before writing the main content of the logs
-func populateFlags(buff *bytes.Buffer, t time.Time, flags int, spacing string, colorfull bool) {
+func populateFlags(buff *bytes.Buffer, t time.Time, flags int, spacing string, colorfull bool, file string) {
 
 	if flags&(DATE_FLAG|TIME_FLAG) != 0 {
 		if flags&(DATE_FLAG) != 0 {
@@ -79,10 +83,34 @@ func populateFlags(buff *bytes.Buffer, t time.Time, flags int, spacing string, c
 		}
 	}
 
+	if flags&(SHORTFILE_FLAG|LONGFILE_FLAG) != 0 {
+
+		// Longfile has the highest priority
+		if flags&(LONGFILE_FLAG) != 0 {
+			// Just write to the buffer
+			if colorfull {
+				buff.WriteString(COLOR_MAP[LONGFILE_FLAG])
+			}
+			buff.WriteString(fmt.Sprintf("%s%s", file, spacing))
+		} else if flags&(SHORTFILE_FLAG) != 0 {
+
+			// Trim some paths, make it nice
+			_home := os.Getenv("HOME")
+			file = strings.TrimPrefix(file, _home+"/")
+			file = strings.SplitN(file, "/", 2)[1]
+
+			if colorfull {
+				buff.WriteString(COLOR_MAP[SHORTFILE_FLAG])
+			}
+			buff.WriteString(fmt.Sprintf("%s%s", file, spacing))
+		}
+
+	}
+
 }
 
 // Responsible for preparing the buffer that has to be written
-func (h *TextHandler) handle(r Record) error {
+func (h *TextHandler) handle(r record) error {
 
 	var _buff []byte
 	var _err bool = false
@@ -97,7 +125,7 @@ func (h *TextHandler) handle(r Record) error {
 
 	// Build the predefined flags
 	t := time.Now()
-	populateFlags(buff, t, r.Options.Flags, _spacing, r.Options.Colorfull)
+	populateFlags(buff, t, r.Options.Flags, _spacing, r.Options.Colorfull, r.file)
 
 	var level string
 

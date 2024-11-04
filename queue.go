@@ -3,15 +3,15 @@ package LogIt
 type logQueue struct {
 
 	// buffered channel that acts FIFO Structure
-	queue chan Record
+	queue chan record
 }
 
 func newLogQueue() *logQueue {
 	return &logQueue{
-		queue: make(chan Record, 10000),
+		queue: make(chan record, 10000),
 	}
 }
 
-func (q *logQueue) push(rc Record) {
+func (q *logQueue) push(rc record) {
 	q.queue <- rc
 }
